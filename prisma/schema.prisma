@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String         @id @default(cuid())
+  email              String         @unique @db.VarChar(255)
+  name               String         @db.VarChar(255)
+  password           String?
+  avatar             String?
+  isEmailVerified    Boolean        @default(false)
+  emailVerifiedAt    DateTime?
+  verificationToken  String?        @unique
+  twoFactorSecret    String?
+  resetToken         String?        @unique
+  resetTokenExpires  DateTime?
+  isTwoFactorEnabled Boolean        @default(false)
+  backupCodes        String[]       @default([])
+  status             UserStatus     @default(ACTIVE)
+  suspensionReason   String?
+  suspendedAt        DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  role               Role           @default(USER)
+  apiKeys            ApiKey[]
+  authProviders      AuthProvider[]
+  urlShorteners      UrlShortener[]
+  executionLogs      ExecutionLog[]
+  securityLogs       SecurityLog[]
+  sessions           UserSession[]
+
+  @@index([email, status])
+  @@index([createdAt])
+  @@index([resetToken, resetTokenExpires])
+  @@map("users")
+}
+
+model AuthProvider {
+  id             String           @id @default(cuid())
+  userId         String
+  provider       AuthProviderType
+  providerId     String           @db.VarChar(255)
+  email          String?          @db.VarChar(255)
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  providerData   Json?
+  isPrimary      Boolean          @default(false)
+  linkedAt       DateTime         @default(now())
+  lastUsedAt     DateTime?
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+  @@index([providerId])
+  @@map("auth_providers")
+}
+
+model UserSession {
+  id                          String         @id @default(cuid())
+  userId                      String
+  sessionId                   String         @unique
+  deviceInfo                  Json?
+  ipAddress                   String?        @db.VarChar(45)
+  userAgent                   String?
+  location                    String?        @db.VarChar(100)
+  browserFingerprintHash      String?        @db.VarChar(255)
+  deviceFingerprintConfidence Float?         @default(0.5)
+  latitude                    Float?
+  longitude                   Float?
+  timezone                    String?        @db.VarChar(50)
+  riskScore                   Float          @default(0)
+  lastIpChangeAt              DateTime?
+  accessCount                 Int            @default(0)
+  unusualActivityCount        Int            @default(0)
+  isActive                    Boolean        @default(true)
+  expiresAt                   DateTime
+  lastActivity                DateTime       @default(now())
+  rememberMe                  Boolean        @default(false)
+  invalidatedAt               DateTime?
+  invalidationReason          String?        @db.VarChar(100)
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
+  refreshTokens               RefreshToken[]
+  user                        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([riskScore])
+  @@index([userId, isActive])
+  @@index([ipAddress, createdAt])
+  @@map("user_sessions")
+}
+
+model RefreshToken {
+  id          String      @id @default(cuid())
+  sessionId   String
+  tokenHash   String      @unique @db.VarChar(255)
+  tokenFamily String?     @db.VarChar(255)
+  isActive    Boolean     @default(true)
+  usedAt      DateTime?
+  expiresAt   DateTime
+  ipAddress   String?     @db.VarChar(45)
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  session     UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("refresh_tokens")
+}
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   @db.VarChar(100)
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("security_logs")
+}
+
+model ExecutionLog {
+  id            String   @id @default(uuid())
+  command       String
+  output        String?
+  success       Boolean
+  exitCode      Int?
+  userId        String
+  executionTime Int
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("execution_logs")
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  name        String
+  description String?
+  userId      String
+  permissions String[]  @default([])
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  usageLimit  Int?
+  expiresAt   DateTime?
+  scopes      String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum AuthProviderType {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+  GITHUB
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model UrlShortener {
+  id           String     @id @default(cuid())
+  shortCode    String     @unique @db.VarChar(8)
+  originalUrl  String     @db.Text
+  userId       String?
+  expiresAt    DateTime?
+  clickCount   Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([shortCode])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("url_shortener")
+}
