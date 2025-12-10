@@ -22,7 +22,10 @@ async function bootstrap() {
   const csrfMiddleware = app.get(CsrfMiddleware);
   app.use((req, res, next) => {
     // Skip CSRF for URL shortener endpoints that use Bearer token authentication
-    if (req.path.startsWith('/url-shortener/') && req.headers.authorization?.startsWith('Bearer ')) {
+    if (
+      req.path.startsWith('/url-shortener/') &&
+      req.headers.authorization?.startsWith('Bearer ')
+    ) {
       return next();
     }
     return csrfMiddleware.use(req, res, next);

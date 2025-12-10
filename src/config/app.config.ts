@@ -17,7 +17,7 @@ export const appConfig = () => {
   if (missingVars.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missingVars.join(', ')}\n` +
-      'Please check your .env file and ensure these variables are set.',
+        'Please check your .env file and ensure these variables are set.',
     );
   }
 
@@ -32,7 +32,6 @@ export const appConfig = () => {
   ) {
     throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long');
   }
-
 
   return {
     // Server configuration
@@ -60,23 +59,6 @@ export const appConfig = () => {
         process.env.JWT_REFRESH_REMEMBER_ME_EXPIRES_IN ?? '30d',
     },
 
-    // Google OAuth configuration
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      callbackUrl:
-        process.env.GOOGLE_CALLBACK_URL ??
-        `${process.env.BACKEND_URL ?? 'http://localhost:40000'}/api/auth/google/callback`,
-    },
-    // Facebook OAuth configuration
-    facebook: {
-      appId: process.env.FACEBOOK_APP_ID ?? '',
-      appSecret: process.env.FACEBOOK_APP_SECRET ?? '',
-      callbackUrl:
-        process.env.FACEBOOK_CALLBACK_URL ??
-        `${process.env.BACKEND_URL ?? 'http://localhost:40000'}/api/auth/facebook/callback`,
-    },
-
     // Frontend configuration
     frontend: {
       url: process.env.FRONTEND_URL ?? 'http://localhost:40001',
@@ -84,9 +66,7 @@ export const appConfig = () => {
 
     // CORS configuration
     cors: {
-      origin:
-        process.env.CORS_ORIGIN ??
-        'http://localhost:40000',
+      origin: process.env.CORS_ORIGIN ?? 'http://localhost:40000',
       credentials: true,
     },
 
@@ -103,6 +83,5 @@ export const appConfig = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-
   };
 };

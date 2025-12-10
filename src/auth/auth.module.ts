@@ -4,32 +4,26 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { LoggerService } from 'src/utils/logger/logger.service';
+import { DatabaseModule } from '../database/database.module';
 import { MailModule } from '../mail/mail.module';
 import { UsersModule } from '../users/users.module';
-import { DatabaseModule } from '../database/database.module';
 
 // New specialized controllers
-import { AuthController } from './controllers/auth.controller';
-import { OAuthController } from './controllers/oauth.controller';
-import { SessionController } from './controllers/session.controller';
-import { TwoFactorController } from './controllers/two-factor.controller';
 import { ApiKeyController } from './controllers/api-key.controller';
+import { AuthController } from './controllers/auth.controller';
+import { SessionController } from './controllers/session.controller';
 
+import { ApiKeyService } from './services/api-key.service';
 import { AuthCoreService } from './services/auth-core.service';
-import { OAuthService } from './services/oauth.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
-import { TwoFactorService } from './services/two-factor.service';
-import { ApiKeyService } from './services/api-key.service';
 
 // OAuth strategies
 
-import { GithubStrategy } from './strategies/github.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
+import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
-import { ApiKeyStrategy } from './strategies/api-key.strategy';
 
 @Module({
   imports: [
@@ -71,8 +65,6 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
   controllers: [
     // New specialized controllers
     AuthController,
-    OAuthController,
-    TwoFactorController,
     SessionController,
     ApiKeyController,
 
@@ -82,8 +74,7 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
   providers: [
     // New specialized services
     AuthCoreService,
-    OAuthService,
-    TwoFactorService,
+
     SessionService,
     TokenService,
     ApiKeyService,
@@ -95,15 +86,11 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
     LocalStrategy,
     JwtStrategy,
     RefreshTokenStrategy,
-    GoogleStrategy,
-    GithubStrategy,
     ApiKeyStrategy,
   ],
   exports: [
     // Export new services for use in other modules
     AuthCoreService,
-    OAuthService,
-    TwoFactorService,
     SessionService,
     TokenService,
 
@@ -112,4 +99,4 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
     PassportModule,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

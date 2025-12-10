@@ -6,11 +6,6 @@ export const validationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('production'),
 
-  // Google Configuration (OAuth & Tag Manager)
-  GOOGLE_CLIENT_ID: Joi.string().required(),
-  GOOGLE_CLIENT_SECRET: Joi.string().required(),
-  GOOGLE_CALLBACK_URL: Joi.string().uri().required(),
-  
   // PORT and Database
   PORT: Joi.number().default(40000),
   DATABASE_URL: Joi.string().required(),
@@ -36,11 +31,6 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_REMEMBER_ME_EXPIRES_IN: Joi.string()
     .pattern(/^(?:\d+)(?:s|m|h|d)$/)
     .default('30d'),
-
-  // Facebook OAuth
-  FACEBOOK_APP_ID: Joi.string().optional(),
-  FACEBOOK_APP_SECRET: Joi.string().optional(),
-  FACEBOOK_CALLBACK_URL: Joi.string().uri().optional(),
 
   // App URLs
   FRONTEND_URL: Joi.string().uri().default('http://localhost:40001'),

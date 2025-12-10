@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from 'generated/prisma/client';
+import { $Enums, Prisma } from 'prisma/generated/client';
 import { LoggerService } from 'src/utils/logger/logger.service';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { $Enums } from 'generated/prisma/client';
 
 // Define JwtPayload interface locally to avoid circular dependencies
 interface JwtPayload {
@@ -240,8 +239,6 @@ export class UsersService {
   }
 
   async findByApiKey(apiKey: string) {
-
     return null;
   }
-
 }

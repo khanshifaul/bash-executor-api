@@ -5,7 +5,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from 'generated/prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from 'prisma/generated/client';
 
 @Injectable()
 export class PrismaService
@@ -15,15 +16,10 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(private configService: ConfigService) {
-    super({
-      log: [
-        { emit: 'event', level: 'query' },
-        { emit: 'event', level: 'error' },
-        { emit: 'event', level: 'info' },
-        { emit: 'event', level: 'warn' },
-      ],
-      errorFormat: 'colorless',
+    const adapter = new PrismaPg({
+      connectionString: configService.get<string>('DATABASE_URL'),
     });
+    super({ adapter });
   }
 
   async onModuleInit() {
