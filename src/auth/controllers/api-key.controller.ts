@@ -24,7 +24,7 @@ import { CreateApiKeyDto } from '../dto/create-api-key.dto';
 import { UpdateApiKeyDto } from '../dto/update-api-key.dto';
 
 @ApiTags('API Keys')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('auth/api-keys')
 @UseGuards(AccessTokenGuard)
 export class ApiKeyController {

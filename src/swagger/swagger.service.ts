@@ -49,8 +49,6 @@ export class SwaggerService implements OnModuleInit {
     // baseUrl is already defined above
     const swaggerDocsUrl =
       this.urlConfigService?.getSwaggerUrl() || `${baseUrl}/api/docs`;
-    const googleClientId = this.configService.get('GOOGLE_CLIENT_ID');
-    const githubClientId = this.configService.get('GITHUB_CLIENT_ID');
 
     // Create the exact tag order array for the custom sorter
     const tagOrder = SWAGGER_CONFIG.tags.map((tag) => tag.name);
@@ -63,10 +61,9 @@ export class SwaggerService implements OnModuleInit {
           const tagOrder = [
             'Application',
             'Authentication',
-            'OAuth Authentication',
-            'Two-Factor Authentication',
-            'Session Management',
             'Users',
+            'Session Management',
+            'API Keys',
           ];
 
           const indexA = tagOrder.indexOf(a);
@@ -88,23 +85,9 @@ export class SwaggerService implements OnModuleInit {
         security: [
           { 'access-token': [] },
           { 'refresh-token': [] },
-          { 'Google OAuth': ['openid', 'email', 'profile'] },
-          { 'Facebook OAuth': ['email', 'public_profile'] },
-          { 'GitHub OAuth': ['user:email', 'read:user'] },
+          { 'x-api-key': [] },
+
         ],
-        oauth: {
-          clientId: googleClientId,
-          redirectUrl:
-            this.urlConfigService?.getOAuthCallbackUrl('google') ||
-            `${baseUrl}/api/auth/google/callback`,
-          usePkceWithAuthorizationCodeGrant: true,
-          scopes: ['openid', 'email', 'profile'],
-        },
-        oauth2RedirectUrl: `${swaggerDocsUrl}/oauth2-redirect.html`,
-        initOAuth: {
-          clientId: githubClientId || googleClientId,
-          usePkceWithAuthorizationCodeGrant: true,
-        },
       },
       customSiteTitle: SWAGGER_CONFIG.title,
     });

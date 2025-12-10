@@ -18,6 +18,7 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiSecurity,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -25,10 +26,11 @@ import {
 } from '@nestjs/swagger';
 import { CommandResponseDto } from './dto/command-response.dto';
 import { RunnerService } from './runner.service';
+import { CommandBaseGuard } from './commands/base/command-base.guard';
 
 @ApiTags('Runner')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth('access-token')
+@ApiSecurity('x-api-key')
 @Controller('runner')
 export class RunnerController {
   constructor(private readonly runnerService: RunnerService) {}

@@ -16,6 +16,10 @@ export const SWAGGER_CONFIG = {
       description: 'User authentication and authorization',
     },
     {
+      name: 'API Keys',
+      description: 'API key management endpoints',
+    },
+    {
       name: 'Runner Commands',
       description: 'Secure command execution endpoints',
     },
@@ -34,6 +38,7 @@ export const SWAGGER_CONFIG = {
       name: 'Authentication',
       tags: [
         'Authentication',
+        'API Keys',
         'OAuth Authentication',
         'Two-Factor Authentication',
         'Session Management',
@@ -77,6 +82,15 @@ export function createSwaggerConfig(baseUrl: string) {
       },
       'refresh-token',
     )
+
+    .addApiKey(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        name: 'x-api-key',
+        in: 'header',
+        description: 'Enter your **API key**',
+      })
 
     // Add tag groups to force order in Swagger UI
     .addServer(baseUrl)

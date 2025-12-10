@@ -12,6 +12,7 @@ import {
   ApiBody,
   ApiOperation,
   ApiResponse,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
 import { CommandBaseGuard } from '../base/command-base.guard';
@@ -30,8 +31,8 @@ import {
 } from './docker-tagserver.dto';
 
 @ApiTags('Runner Commands')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), CommandBaseGuard)
+@ApiBearerAuth('access-token')
+@ApiSecurity('x-api-key')
 @Controller('commands/docker-tagserver')
 export class DockerTagserverController {
   constructor(private readonly handler: DockerTagserverCommandHandler) {}
