@@ -4,9 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -15,7 +13,6 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { CommandBaseGuard } from '../base/command-base.guard';
 import { CommandResponseDto } from '../../dto/command-response.dto';
 import { DockerTagserverCommandHandler } from './docker-tagserver.handler';
 import {
@@ -35,7 +32,7 @@ import {
 @ApiSecurity('x-api-key')
 @Controller('commands/docker-tagserver')
 export class DockerTagserverController {
-  constructor(private readonly handler: DockerTagserverCommandHandler) {}
+  constructor(private readonly handler: DockerTagserverCommandHandler) { }
 
   @Post('create')
   @HttpCode(HttpStatus.OK)

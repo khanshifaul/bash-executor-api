@@ -27,7 +27,7 @@ export class ApiKeyStrategy extends PassportStrategy(
     private readonly prisma: PrismaService,
     private readonly loggerService: LoggerService,
   ) {
-    super({ header: 'X-API-Key', prefix: '' }, true);
+    super({ header: 'X-API-Key', prefix: '' }, false);
   }
 
   async validate(apiKey: string, done: Function) {

@@ -8,7 +8,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
-export class AccessTokenGuard extends AuthGuard('jwt') {
+export class AccessTokenGuard extends AuthGuard(['jwt', 'api-key']) {
     constructor(private reflector: Reflector) {
         super();
     }
@@ -34,6 +34,7 @@ export class AccessTokenGuard extends AuthGuard('jwt') {
 
         console.log(`🔍 Access Token Guard Check - Controller: ${controller.name}, Handler: ${handler.name}, isPublic: ${isPublic}`);
         console.log(`🔍 Authorization Header: ${request.headers.authorization ? 'Present' : 'Missing'}`);
+        console.log(`🔍 X-API-Key Header: ${request.headers['x-api-key'] ? 'Present' : 'Missing'}`);
         console.log(`🔍 Request Method: ${request.method}, URL: ${request.url}`);
 
         if (isPublic) {
@@ -41,7 +42,7 @@ export class AccessTokenGuard extends AuthGuard('jwt') {
             return true;
         }
 
-        console.log(`🔒 Endpoint requires authentication, proceeding with access token validation`);
+        console.log(`🔒 Endpoint requires authentication, proceeding with access token or api key validation`);
         return super.canActivate(context);
     }
 

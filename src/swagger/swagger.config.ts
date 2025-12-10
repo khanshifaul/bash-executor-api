@@ -85,12 +85,13 @@ export function createSwaggerConfig(baseUrl: string) {
 
     .addApiKey(
       {
-        type: 'http',
-        scheme: 'bearer',
+        type: 'apiKey',
         name: 'x-api-key',
         in: 'header',
         description: 'Enter your **API key**',
-      })
+      },
+      'x-api-key',
+    )
 
     // Add tag groups to force order in Swagger UI
     .addServer(baseUrl)

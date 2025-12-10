@@ -12,9 +12,7 @@ import {
   Post,
   Query,
   Request,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -26,14 +24,13 @@ import {
 } from '@nestjs/swagger';
 import { CommandResponseDto } from './dto/command-response.dto';
 import { RunnerService } from './runner.service';
-import { CommandBaseGuard } from './commands/base/command-base.guard';
 
 @ApiTags('Runner')
 @ApiBearerAuth('access-token')
 @ApiSecurity('x-api-key')
 @Controller('runner')
 export class RunnerController {
-  constructor(private readonly runnerService: RunnerService) {}
+  constructor(private readonly runnerService: RunnerService) { }
 
   @Post('execute')
   @HttpCode(HttpStatus.OK)
