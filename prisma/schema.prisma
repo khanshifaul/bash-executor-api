@@ -180,7 +180,6 @@ enum Role {
 enum AuthProviderType {
   LOCAL
   GOOGLE
-  FACEBOOK
   GITHUB
 }
 

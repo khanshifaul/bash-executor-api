@@ -90,7 +90,11 @@ export class RunnerService {
   ) {
     try {
       const success = response.exitCode === 0;
-      const output = `${response.stdout}\n${response.stderr}`.trim();
+      const stdoutStr =
+        typeof response.stdout === 'string'
+          ? response.stdout
+          : JSON.stringify(response.stdout, null, 2);
+      const output = `${stdoutStr}\n${response.stderr}`.trim();
       const sanitizedOutput = this.sanitizeOutput(output);
       await this.prisma.executionLog.create({
         data: {
@@ -189,7 +193,7 @@ export class RunnerService {
 
       const cleanedCount = result.count;
       this.logger.log(`Cleaned up ${cleanedCount} execution logs older than ${daysToKeep} days`);
-      
+
       return cleanedCount;
     } catch (error) {
       this.logger.error('Failed to cleanup old logs', error as Error);

@@ -1,5 +1,5 @@
 export class CommandResponseDto {
-  stdout: string;
+  stdout: any;
   stderr: string;
   exitCode: number;
   duration: number;

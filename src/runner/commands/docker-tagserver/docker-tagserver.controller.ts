@@ -47,7 +47,9 @@ export class DockerTagserverController {
     schema: {
       type: 'object',
       properties: {
-        stdout: { type: 'string' },
+        stdout: {
+          oneOf: [{ type: 'string' }, { type: 'object' }],
+        },
         stderr: { type: 'string' },
         exitCode: { type: 'number' },
         duration: { type: 'number' },

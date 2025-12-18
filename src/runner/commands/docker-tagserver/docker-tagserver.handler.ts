@@ -187,7 +187,7 @@ export class DockerTagserverCommandHandler {
       proc.on('close', (code: number | null) => {
         const exitCode = code ?? -1;
         resolve({
-          stdout: this.sanitizeOutput(stdout),
+          stdout: this.tryParseJson(this.sanitizeOutput(stdout)),
           stderr: this.sanitizeOutput(stderr),
           exitCode,
           duration: Date.now() - startTime,
@@ -215,5 +215,17 @@ export class DockerTagserverCommandHandler {
       .replace(/\x00/g, '')
       .replace(/\r/g, '\n')
       .substring(0, 10000);
+  }
+
+  private tryParseJson(str: string): any {
+    try {
+      const trimmed = str.trim();
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        return JSON.parse(trimmed);
+      }
+      return str;
+    } catch (e) {
+      return str;
+    }
   }
 }
