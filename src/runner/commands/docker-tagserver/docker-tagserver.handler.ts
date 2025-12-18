@@ -110,7 +110,7 @@ export class DockerTagserverCommandHandler {
     if (dto.containerId) cmd.push('-i', dto.containerId);
     if (dto.containerName) cmd.push('-n', dto.containerName);
     if (dto.user) cmd.push('-u', dto.user);
-    if (dto.follow) cmd.push('-f');
+
     return this.executeCommand(cmd);
   }
 

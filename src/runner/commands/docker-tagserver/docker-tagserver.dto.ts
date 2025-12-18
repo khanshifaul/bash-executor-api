@@ -169,21 +169,7 @@ export class DockerTagserverLogsDto {
   @IsOptional()
   user?: string;
 
-  @ApiProperty({
-    type: Boolean,
-    example: true,
-  })
-  @IsBoolean()
-  @IsOptional()
-  follow?: boolean = false;
 
-  @ApiProperty({
-    type: Boolean,
-    example: true,
-  })
-  @IsBoolean()
-  @IsOptional()
-  json?: boolean = true;
 }
 
 /**
