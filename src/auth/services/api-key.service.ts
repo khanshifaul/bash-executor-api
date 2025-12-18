@@ -9,7 +9,7 @@ import * as crypto from 'node:crypto';
 
 @Injectable()
 export class ApiKeyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(userId: string, dto: CreateApiKeyDto) {
     const key = crypto.randomBytes(32).toString('hex');
@@ -64,9 +64,8 @@ export class ApiKeyService {
       throw new NotFoundException('API key not found');
     }
 
-    // Hide sensitive key
-    const { key, ...safeApiKey } = apiKey;
-    return safeApiKey;
+    // Return the full key object including the secret key
+    return apiKey;
   }
 
   async update(userId: string, id: string, dto: UpdateApiKeyDto) {
