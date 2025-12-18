@@ -212,6 +212,7 @@ export class DockerTagserverCommandHandler {
 
   private sanitizeOutput(output: string): string {
     return output
+      .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
       .replace(/\x00/g, '')
       .replace(/\r/g, '\n')
       .substring(0, 10000);
