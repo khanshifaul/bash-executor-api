@@ -61,7 +61,8 @@ export class DockerTagserverController {
     description: 'Invalid parameters',
   })
   async create(@Body() dto: DockerTagserverCreateDto): Promise<CommandResponseDto> {
-    return this.handler.handleCreate(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleCreate(finalDto);
   }
 
   @Post('list')
@@ -85,7 +86,8 @@ export class DockerTagserverController {
     },
   })
   async list(@Body() dto: DockerTagserverListDto): Promise<CommandResponseDto> {
-    return this.handler.handleList(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleList(finalDto);
   }
 
   @Post('get')
@@ -100,7 +102,8 @@ export class DockerTagserverController {
     description: 'Container details retrieved successfully',
   })
   async get(@Body() dto: DockerTagserverGetDto): Promise<CommandResponseDto> {
-    return this.handler.handleGet(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleGet(finalDto);
   }
 
   @Post('stop')
@@ -115,7 +118,8 @@ export class DockerTagserverController {
     description: 'Container stopped successfully',
   })
   async stop(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    return this.handler.handleStop(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleStop(finalDto);
   }
 
   @Post('start')
@@ -130,7 +134,8 @@ export class DockerTagserverController {
     description: 'Container started successfully',
   })
   async start(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    return this.handler.handleStart(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleStart(finalDto);
   }
 
   @Post('restart')
@@ -145,7 +150,8 @@ export class DockerTagserverController {
     description: 'Container restarted successfully',
   })
   async restart(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    return this.handler.handleRestart(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleRestart(finalDto);
   }
 
   @Post('delete')
@@ -160,7 +166,8 @@ export class DockerTagserverController {
     description: 'Container deleted successfully',
   })
   async delete(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    return this.handler.handleDelete(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleDelete(finalDto);
   }
 
   @Post('logs')
@@ -175,7 +182,8 @@ export class DockerTagserverController {
     description: 'Container logs retrieved successfully',
   })
   async logs(@Body() dto: DockerTagserverLogsDto): Promise<CommandResponseDto> {
-    return this.handler.handleLogs(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleLogs(finalDto);
   }
 
   @Post('add-custom-domain')
@@ -190,7 +198,8 @@ export class DockerTagserverController {
     description: 'Custom domains added successfully',
   })
   async addCustomDomain(@Body() dto: DockerTagserverAddCustomDomainDto): Promise<CommandResponseDto> {
-    return this.handler.handleAddCustomDomain(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleAddCustomDomain(finalDto);
   }
 
   @Post('verify-dns-tasks')
@@ -220,7 +229,8 @@ export class DockerTagserverController {
     description: 'Log count retrieved successfully',
   })
   async countLogs(@Body() dto: DockerTagserverCountLogsDto): Promise<CommandResponseDto> {
-    return this.handler.handleCountLogs(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleCountLogs(finalDto);
   }
 
   @Post('update-nginx')
@@ -235,6 +245,7 @@ export class DockerTagserverController {
     description: 'Nginx configuration updated successfully',
   })
   async updateNginx(@Body() dto: DockerTagserverUpdateNginxDto): Promise<CommandResponseDto> {
-    return this.handler.handleUpdateNginx(dto);
+    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    return this.handler.handleUpdateNginx(finalDto);
   }
 }
