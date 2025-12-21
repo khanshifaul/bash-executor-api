@@ -208,7 +208,7 @@ export class DockerTagserverController {
     return this.handler.handleVerifyDnsTasks();
   }
 
-  @Post('count-logs')
+  @Post('count-usage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Count log lines',
@@ -220,7 +220,7 @@ export class DockerTagserverController {
     description: 'Log count retrieved successfully',
   })
   async countLogs(@Body() dto: DockerTagserverCountLogsDto): Promise<CommandResponseDto> {
-    return this.handler.handleCountLogs(dto);
+    return this.handler.handleCountUsage(dto);
   }
 
   @Post('update-nginx')

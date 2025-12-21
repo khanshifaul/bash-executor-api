@@ -135,9 +135,9 @@ export class DockerTagserverCommandHandler {
   }
 
   /**
-   * Count log lines
+   * Count usage
    */
-  async handleCountLogs(dto: DockerTagserverCountLogsDto): Promise<CommandResponseDto> {
+  async handleCountUsage(dto: DockerTagserverCountLogsDto): Promise<CommandResponseDto> {
     const cmd = ['/root/scripts/docker-tagserver.sh', 'count-usage', '--json'];
     if (dto.containerId) cmd.push('-i', dto.containerId);
     if (dto.containerName) cmd.push('-n', dto.containerName);
