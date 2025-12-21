@@ -38,11 +38,9 @@ export class DockerTagserverCreateDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverCreateDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverCreateDto)
-  args?: DockerTagserverCreateDto;
+  args?: any;
 }
 
 /**
@@ -73,11 +71,9 @@ export class DockerTagserverListDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverListDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverListDto)
-  args?: DockerTagserverListDto;
+  args?: any;
 }
 
 /**
@@ -116,11 +112,9 @@ export class DockerTagserverGetDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverGetDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverGetDto)
-  args?: DockerTagserverGetDto;
+  args?: any;
 }
 
 /**
@@ -159,11 +153,9 @@ export class DockerTagserverContainerControlDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverContainerControlDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverContainerControlDto)
-  args?: DockerTagserverContainerControlDto;
+  args?: any;
 }
 
 /**
@@ -195,11 +187,9 @@ export class DockerTagserverLogsDto {
   user?: string;
 
 
-  @ApiProperty({ type: () => DockerTagserverLogsDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverLogsDto)
-  args?: DockerTagserverLogsDto;
+  args?: any;
 }
 
 /**
@@ -246,11 +236,9 @@ export class DockerTagserverAddCustomDomainDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverAddCustomDomainDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverAddCustomDomainDto)
-  args?: DockerTagserverAddCustomDomainDto;
+  args?: any;
 }
 
 /**
@@ -313,11 +301,9 @@ export class DockerTagserverCountLogsDto {
   @IsOptional()
   json?: boolean = true;
 
-  @ApiProperty({ type: () => DockerTagserverCountLogsDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverCountLogsDto)
-  args?: DockerTagserverCountLogsDto;
+  args?: any;
 }
 
 /**
@@ -348,11 +334,9 @@ export class DockerTagserverUpdateNginxDto {
   @IsOptional()
   user?: string;
 
-  @ApiProperty({ type: () => DockerTagserverUpdateNginxDto, required: false })
+  @ApiProperty({ type: Object, required: false })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => DockerTagserverUpdateNginxDto)
-  args?: DockerTagserverUpdateNginxDto;
+  args?: any;
 }
 
 /**

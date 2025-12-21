@@ -61,7 +61,7 @@ export class DockerTagserverController {
     description: 'Invalid parameters',
   })
   async create(@Body() dto: DockerTagserverCreateDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleCreate(finalDto);
   }
 
@@ -86,7 +86,7 @@ export class DockerTagserverController {
     },
   })
   async list(@Body() dto: DockerTagserverListDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleList(finalDto);
   }
 
@@ -102,7 +102,7 @@ export class DockerTagserverController {
     description: 'Container details retrieved successfully',
   })
   async get(@Body() dto: DockerTagserverGetDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleGet(finalDto);
   }
 
@@ -118,7 +118,7 @@ export class DockerTagserverController {
     description: 'Container stopped successfully',
   })
   async stop(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleStop(finalDto);
   }
 
@@ -134,7 +134,7 @@ export class DockerTagserverController {
     description: 'Container started successfully',
   })
   async start(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleStart(finalDto);
   }
 
@@ -150,7 +150,7 @@ export class DockerTagserverController {
     description: 'Container restarted successfully',
   })
   async restart(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleRestart(finalDto);
   }
 
@@ -166,7 +166,7 @@ export class DockerTagserverController {
     description: 'Container deleted successfully',
   })
   async delete(@Body() dto: DockerTagserverContainerControlDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleDelete(finalDto);
   }
 
@@ -182,7 +182,7 @@ export class DockerTagserverController {
     description: 'Container logs retrieved successfully',
   })
   async logs(@Body() dto: DockerTagserverLogsDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleLogs(finalDto);
   }
 
@@ -198,7 +198,7 @@ export class DockerTagserverController {
     description: 'Custom domains added successfully',
   })
   async addCustomDomain(@Body() dto: DockerTagserverAddCustomDomainDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleAddCustomDomain(finalDto);
   }
 
@@ -229,7 +229,7 @@ export class DockerTagserverController {
     description: 'Log count retrieved successfully',
   })
   async countLogs(@Body() dto: DockerTagserverCountLogsDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleCountLogs(finalDto);
   }
 
@@ -245,7 +245,7 @@ export class DockerTagserverController {
     description: 'Nginx configuration updated successfully',
   })
   async updateNginx(@Body() dto: DockerTagserverUpdateNginxDto): Promise<CommandResponseDto> {
-    const finalDto = dto.args ? { ...dto, ...dto.args } : dto;
+    const finalDto = (dto.args && typeof dto.args === 'object') ? { ...dto, ...dto.args } : dto;
     return this.handler.handleUpdateNginx(finalDto);
   }
 }
