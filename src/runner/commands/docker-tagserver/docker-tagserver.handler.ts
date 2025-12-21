@@ -219,14 +219,34 @@ export class DockerTagserverCommandHandler {
   }
 
   private tryParseJson(str: string): any {
+    const trimmed = str.trim();
+    // 1. Try parsing the whole string first (fast path)
     try {
-      const trimmed = str.trim();
       if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
         return JSON.parse(trimmed);
       }
-      return str;
     } catch (e) {
-      return str;
+      // ignore
     }
+
+    // 2. Try to find the last valid JSON object/array in the output
+    // Split by newlines and check from the end, as valid JSON usually comes last in scripts
+    try {
+      const lines = trimmed.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if ((line.startsWith('{') && line.endsWith('}')) || (line.startsWith('[') && line.endsWith(']'))) {
+          try {
+            return JSON.parse(line);
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return str;
   }
 }
