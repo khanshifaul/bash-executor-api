@@ -142,6 +142,7 @@ export class DockerTagserverCommandHandler {
     if (dto.containerId) cmd.push('-i', dto.containerId);
     if (dto.containerName) cmd.push('-n', dto.containerName);
     if (dto.user) cmd.push('-u', dto.user);
+    if (dto.all) cmd.push('-a');
     if (dto.pattern) cmd.push('-p', dto.pattern);
     if (dto.since) cmd.push('--since', dto.since);
     if (dto.until) cmd.push('--until', dto.until);

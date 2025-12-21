@@ -31,6 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Global flag for clean JSON output
 JSON_OUTPUT=0
+JSON_ERRORS=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -42,7 +43,16 @@ NC='\033[0m'
 log_info() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${BLUE}[INFO]${NC} $1" >&2; }
 log_success() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GREEN}[SUCCESS]${NC} $1" >&2; }
 log_warning() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${YELLOW}[WARNING]${NC} $1" >&2; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+log_error() {
+	echo -e "${RED}[ERROR]${NC} $1" >&2
+	if [[ $JSON_OUTPUT -eq 1 ]]; then
+		if [[ -z "$JSON_ERRORS" ]]; then
+			JSON_ERRORS="$1"
+		else
+			JSON_ERRORS="$JSON_ERRORS | $1"
+		fi
+	fi
+}
 
 validate_project_name() {
         [[ "$1" =~ ^[a-zA-Z0-9_-]+$ ]] || {
@@ -88,20 +98,30 @@ readonly CURRENT_USER_ID=$(whoami 2>/dev/null || echo "unknown")
 # =============================================================================
 
 build_json_object() {
-        local output="{"
-        local first=true
-        while [[ $# -gt 0 ]]; do
-                local key="$1"
-                shift
-                local value="$1"
-                shift
-                value="${value//\"/\\\"}"
-                if ! $first; then output="$output,"; fi
-                output="$output\"$key\":\"$value\""
-                first=false
-        done
-        output="$output}"
-        printf '%s' "$output"
+	local output="{"
+	local first=true
+	while [[ $# -gt 0 ]]; do
+		local key="$1"
+		shift
+		local value="$1"
+		shift
+		value="${value//\"/\\\"}"
+		value="${value//$'\n'/\\n}"
+		if ! $first; then output="$output,"; fi
+		output="$output\"$key\":\"$value\""
+		first=false
+	done
+
+	# Automatically include errors if any
+	if [[ -n "$JSON_ERRORS" ]]; then
+		local err_escaped="${JSON_ERRORS//\"/\\\"}"
+		err_escaped="${err_escaped//$'\n'/\\n}"
+		if ! $first; then output="$output,"; fi
+		output="$output\"error\":\"$err_escaped\""
+	fi
+
+	output="$output}"
+	printf '%s' "$output"
 }
 
 json_write() {
@@ -1634,147 +1654,153 @@ remove_custom_domain() {
 }
 
 count_usage() {
-    local container_id="" container_name="" user_id="" use_json=false since_time="" until_time=""
+	local container_id="" container_name="" user_id="" use_json=false since_time="" until_time="" show_all=false
 
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-        -i | --id)
-            container_id="$2"
-            shift 2
-            ;;
-        -n | --name)
-            container_name="$2"
-            shift 2
-            ;;
-        -u | --user)
-            user_id="$2"
-            shift 2
-            ;;
-        --since)
-            since_time="$2"
-            shift 2
-            ;;
-        --until)
-            until_time="$2"
-            shift 2
-            ;;
-        --json)
-            use_json=true
-            shift
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            return 1
-            ;;
-        esac
-    done
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		-i | --id)
+			container_id="$2"
+			shift 2
+			;;
+		-n | --name)
+			container_name="$2"
+			shift 2
+			;;
+		-u | --user)
+			user_id="$2"
+			shift 2
+			;;
+		-a | --all)
+			show_all=true
+			shift
+			;;
+		--since)
+			since_time="$2"
+			shift 2
+			;;
+		--until)
+			until_time="$2"
+			shift 2
+			;;
+		--json)
+			use_json=true
+			shift
+			;;
+		*)
+			log_error "Unknown option: $1"
+			return 1
+			;;
+		esac
+	done
 
-    local container=""
-    if [[ -n "$container_name" ]]; then
-        container=$(find_container "$container_name" "$user_id")
-    elif [[ -n "$container_id" ]]; then
-        container=$(find_container "$container_id" "$user_id")
-    else
-        if $use_json; then
-            json_write "$(build_json_object "error" "Container ID or name required")"
-        else
-            log_error "Container ID or name required"
-        fi
-        return 1
-    fi
+	local containers=()
+	if $show_all; then
+		if [[ -n "$user_id" ]]; then
+			mapfile -t containers < <(find_containers_by_user "$user_id")
+		else
+			mapfile -t containers < <(docker ps -a --format '{{.Names}}' | grep -E "^${CONTAINER_NAME_PREFIX}-" | sort)
+		fi
+	elif [[ -n "$container_name" ]]; then
+		local c=$(find_container "$container_name" "$user_id")
+		[[ -n "$c" ]] && containers+=("$c")
+	elif [[ -n "$container_id" ]]; then
+		local c=$(find_container "$container_id" "$user_id")
+		[[ -n "$c" ]] && containers+=("$c")
+	else
+		if $use_json; then
+			json_write "$(build_json_object "error" "Container ID, name or --all required")"
+		else
+			log_error "Container ID, name or --all required"
+		fi
+		return 1
+	fi
 
-    [[ -z "$container" ]] || ! validate_container "$container" && {
-        if $use_json; then
-            json_write "$(build_json_object "error" "Container not found")"
-        else
-            log_error "Container not found"
-        fi
-        return 1
-    }
+	if [[ ${#containers[@]} -eq 0 ]]; then
+		if $use_json; then
+			if $show_all; then
+				json_write "[]"
+			else
+				json_write "$(build_json_object "error" "Container not found")"
+			fi
+		else
+			log_error "No containers found"
+		fi
+		return 1
+	fi
 
-    # Build docker logs command with optional time filters
-    local docker_args=()
-    if [[ -n "$since_time" ]]; then
-        docker_args+=(--since "$since_time")
-    fi
-    if [[ -n "$until_time" ]]; then
-        docker_args+=(--until "$until_time")
-    fi
+	local first=true
+	if [[ $use_json && $show_all ]]; then
+		printf '['
+	fi
 
-    local logs
-    if [[ ${#docker_args[@]} -gt 0 ]]; then
-        logs=$(docker logs "${docker_args[@]}" "$container" 2>&1)
-    else
-        logs=$(docker logs "$container" 2>&1)
-    fi
+	for container in "${containers[@]}"; do
+		if ! validate_container "$container"; then
+			continue
+		fi
 
-    # Count total requests using multiple patterns to catch different log formats
-    local total_requests=0
+		# Build docker logs command with optional time filters
+		local docker_args=()
+		[[ -n "$since_time" ]] && docker_args+=(--since "$since_time")
+		[[ -n "$until_time" ]] && docker_args+=(--until "$until_time")
 
-    # Pattern 1: Standard HTTP methods with paths
-    total_requests=$((total_requests + $(echo "$logs" | grep -c -E "(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD) [\"']?/")))
+		local logs
+		logs=$(docker logs "${docker_args[@]}" "$container" 2>&1)
 
-    # Pattern 2: Common web server log formats
-    total_requests=$((total_requests + $(echo "$logs" | grep -c -E "\" (GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD) ")))
+		# Count total requests using multiple patterns
+		local total_requests=0
+		total_requests=$((total_requests + $(echo "$logs" | grep -c -E "(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD) [\"']?/")))
+		total_requests=$((total_requests + $(echo "$logs" | grep -c -E "\" (GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD) ")))
 
-    # Pattern 3: Status codes (200, 404, 500, etc.)
-    if [[ $total_requests -eq 0 ]]; then
-        total_requests=$((total_requests + $(echo "$logs" | grep -c -E " 200 | 404 | 500 | 302 | 301 ")))
-    fi
+		if [[ $total_requests -eq 0 ]]; then
+			total_requests=$((total_requests + $(echo "$logs" | grep -c -E " 200 | 404 | 500 | 302 | 301 ")))
+		fi
 
-    # Pattern 4: Common API/route indicators
-    if [[ $total_requests -eq 0 ]]; then
-        total_requests=$((total_requests + $(echo "$logs" | grep -c -E "(/api/|/v[0-9]/|/graphql|/rest/| endpoint| route)")))
-    fi
+		if [[ $total_requests -eq 0 ]]; then
+			total_requests=$((total_requests + $(echo "$logs" | grep -c -E "(/api/|/v[0-9]/|/graphql|/rest/| endpoint| route)")))
+		fi
 
-    # Pattern 5: If still zero, count all lines as potential activity
-    if [[ $total_requests -eq 0 && -n "$logs" ]]; then
-        total_requests=$(echo "$logs" | wc -l)
-    fi
+		if [[ $total_requests -eq 0 && -n "$logs" ]]; then
+			total_requests=$(echo "$logs" | wc -l)
+		fi
 
-    # Build time range info
-    local time_range_info=""
-    if [[ -n "$since_time" && -n "$until_time" ]]; then
-        time_range_info="between $since_time and $until_time"
-    elif [[ -n "$since_time" ]]; then
-        time_range_info="since $since_time"
-    elif [[ -n "$until_time" ]]; then
-        time_range_info="until $until_time"
-    fi
+		# Build time range info for human readable
+		local time_range_info=""
+		if [[ -n "$since_time" && -n "$until_time" ]]; then
+			time_range_info="between $since_time and $until_time"
+		elif [[ -n "$since_time" ]]; then
+			time_range_info="since $since_time"
+		elif [[ -n "$until_time" ]]; then
+			time_range_info="until $until_time"
+		fi
 
-    if $use_json; then
-        # Build JSON object with only essential fields
-        local json_parts=()
-        json_parts+=("\"container\":\"$container\"")
-        json_parts+=("\"total_requests\":\"$total_requests\"")
+		if $use_json; then
+			local json_obj=$(build_json_object \
+				"container" "$container" \
+				"total_requests" "$total_requests" \
+				"since" "$since_time" \
+				"until" "$until_time")
 
-        [[ -n "$time_range_info" ]] && json_parts+=("\"time_range\":\"$time_range_info\"")
-        [[ -n "$since_time" ]] && json_parts+=("\"since\":\"$since_time\"")
-        [[ -n "$until_time" ]] && json_parts+=("\"until\":\"$until_time\"")
+			if $show_all; then
+				[[ $first == false ]] && printf ','
+				printf '%s' "$json_obj"
+			else
+				json_write "$json_obj"
+			fi
+		else
+			[[ $JSON_OUTPUT -eq 0 ]] && echo
+			log_info "📊 Usage Statistics for: $container"
+			[[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GRAY}$(printf '%.0s─' {1..60})${NC}"
+			[[ -n "$time_range_info" ]] && log_info "Time Range: $time_range_info"
+			[[ $JSON_OUTPUT -eq 0 ]] && echo -e "Total Requests: ${BOLD}$total_requests${NC}"
+			[[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GRAY}$(printf '%.0s─' {1..60})${NC}"
+			[[ $JSON_OUTPUT -eq 0 ]] && echo
+		fi
+		first=false
+	done
 
-        local json_output="{"
-        for i in "${!json_parts[@]}"; do
-            [[ $i -gt 0 ]] && json_output+=","
-            json_output+="${json_parts[$i]}"
-        done
-        json_output+="}"
-
-        json_write "$json_output"
-    else
-        [[ $JSON_OUTPUT -eq 0 ]] && echo
-        log_info "📊 Usage Statistics for: $container"
-        [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GRAY}$(printf '%.0s─' {1..60})${NC}"
-
-        if [[ -n "$time_range_info" ]]; then
-            log_info "Time Range: $time_range_info"
-        fi
-
-        [[ $JSON_OUTPUT -eq 0 ]] && echo
-        [[ $JSON_OUTPUT -eq 0 ]] && echo -e "Total Requests: ${BOLD}$total_requests${NC}"
-
-        [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GRAY}$(printf '%.0s─' {1..60})${NC}"
-        [[ $JSON_OUTPUT -eq 0 ]] && echo
-    fi
+	if [[ $use_json && $show_all ]]; then
+		printf ']\n'
+	fi
 }
 
 # =============================================================================
@@ -1844,10 +1870,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         remove-custom-domain) remove_custom_domain "$@" ;;
         count-usage) count_usage "$@" ;;
         help | -h | --help) show_docker_tagserver_help ;;
-        *)
-                log_error "Unknown command: $CMD"
-                show_docker_tagserver_help
-                exit 1
-                ;;
+	*)
+		log_error "Unknown command: $CMD"
+		if [[ $JSON_OUTPUT -eq 1 ]]; then
+			json_write "$(build_json_object "error" "Unknown command" "command" "$CMD")"
+		else
+			show_docker_tagserver_help
+		fi
+		exit 1
+		;;
         esac
 fi

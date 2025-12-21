@@ -270,6 +270,14 @@ export class DockerTagserverCountLogsDto {
 
   @ApiProperty({
     type: Boolean,
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  all?: boolean = false;
+
+  @ApiProperty({
+    type: Boolean,
     example: true,
   })
   @IsBoolean()
