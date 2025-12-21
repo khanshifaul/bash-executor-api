@@ -37,10 +37,6 @@ export class DockerTagserverCreateDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -70,10 +66,6 @@ export class DockerTagserverListDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -111,10 +103,6 @@ export class DockerTagserverGetDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -152,10 +140,6 @@ export class DockerTagserverContainerControlDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -185,11 +169,6 @@ export class DockerTagserverLogsDto {
   @IsString()
   @IsOptional()
   user?: string;
-
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -235,10 +214,6 @@ export class DockerTagserverAddCustomDomainDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -300,10 +275,6 @@ export class DockerTagserverCountLogsDto {
   @IsBoolean()
   @IsOptional()
   json?: boolean = true;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
@@ -333,10 +304,6 @@ export class DockerTagserverUpdateNginxDto {
   @IsString()
   @IsOptional()
   user?: string;
-
-  @ApiProperty({ type: Object, required: false })
-  @IsOptional()
-  args?: any;
 }
 
 /**
