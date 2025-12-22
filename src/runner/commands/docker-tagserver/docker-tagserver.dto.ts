@@ -318,3 +318,21 @@ export class DockerTagserverUpdateNginxDto {
  * Docker Tagserver Verify DNS Tasks Command DTO (no arguments)
  */
 export class DockerTagserverVerifyDnsTasksDto { }
+
+/**
+ * Docker Tagserver Retry SSL Command DTO
+ */
+export class DockerTagserverRetrySslDto {
+  @ApiProperty({
+    type: Boolean,
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  json?: boolean = true;
+}
+
+/**
+ * Docker Tagserver Cron Setup Command DTO
+ */
+export class DockerTagserverCronSetupDto { }

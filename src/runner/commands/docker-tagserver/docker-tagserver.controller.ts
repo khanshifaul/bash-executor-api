@@ -25,6 +25,8 @@ import {
   DockerTagserverLogsDto,
   DockerTagserverUpdateNginxDto,
   DockerTagserverVerifyDnsTasksDto,
+  DockerTagserverRetrySslDto,
+  DockerTagserverCronSetupDto,
 } from './docker-tagserver.dto';
 
 @ApiTags('Runner Commands')
@@ -236,5 +238,35 @@ export class DockerTagserverController {
   })
   async updateNginx(@Body() dto: DockerTagserverUpdateNginxDto): Promise<CommandResponseDto> {
     return this.handler.handleUpdateNginx(dto);
+  }
+
+  @Post('retry-ssl')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retry SSL certificate generation',
+    description: 'Attempt to upgrade local/failed certificates to Let\'s Encrypt',
+  })
+  @ApiBody({ type: DockerTagserverRetrySslDto })
+  @ApiResponse({
+    status: 200,
+    description: 'SSL retry process completed',
+  })
+  async retrySsl(@Body() dto: DockerTagserverRetrySslDto): Promise<CommandResponseDto> {
+    return this.handler.handleRetrySsl(dto);
+  }
+
+  @Post('cron-setup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Setup SSL retry cronjob',
+    description: 'Install a 3-hour cronjob to automatically retry failed SSL certificates',
+  })
+  @ApiBody({ type: DockerTagserverCronSetupDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cronjob setup successfully',
+  })
+  async cronSetup(@Body() dto: DockerTagserverCronSetupDto): Promise<CommandResponseDto> {
+    return this.handler.handleCronSetup();
   }
 }

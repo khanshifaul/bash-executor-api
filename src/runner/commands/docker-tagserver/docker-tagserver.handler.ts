@@ -11,6 +11,8 @@ import {
   DockerTagserverLogsDto,
   DockerTagserverUpdateNginxDto,
   DockerTagserverVerifyDnsTasksDto,
+  DockerTagserverRetrySslDto,
+  DockerTagserverCronSetupDto,
 } from './docker-tagserver.dto';
 
 @Injectable()
@@ -157,6 +159,23 @@ export class DockerTagserverCommandHandler {
     if (dto.containerId) cmd.push('-i', dto.containerId);
     if (dto.containerName) cmd.push('-n', dto.containerName);
     if (dto.user) cmd.push('-u', dto.user);
+    return this.executeCommand(cmd, true);
+  }
+
+  /**
+   * Retry SSL certificate generation for local fallbacks
+   */
+  async handleRetrySsl(dto: DockerTagserverRetrySslDto): Promise<CommandResponseDto> {
+    const cmd = ['/root/scripts/docker-tagserver.sh', 'retry-ssl'];
+    if (dto.json !== false) cmd.push('--json');
+    return this.executeCommand(cmd, true);
+  }
+
+  /**
+   * Setup 3-hour cronjob for SSL retry
+   */
+  async handleCronSetup(): Promise<CommandResponseDto> {
+    const cmd = ['/root/scripts/docker-tagserver.sh', 'cron-setup'];
     return this.executeCommand(cmd, true);
   }
 

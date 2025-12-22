@@ -205,123 +205,133 @@ dns_verify() {
         return 0
 }
 
-setup_ssl_certificates() {
-        local domains="$1" custom_name="$2" port="$3"
-
-        IFS=' ' read -ra domain_array <<<"$domains"
-        local primary_domain="${domain_array[0]}"
-
-        # Check if SSL certificate already exists and is valid
-        if check_ssl_enabled "$primary_domain"; then
-                log_info "SSL certificate already exists for $primary_domain"
-                return 0
+ensure_ssl_options() {
+        if [[ ! -f "/etc/letsencrypt/options-ssl-nginx.conf" ]] || [[ ! -f "/etc/letsencrypt/ssl-dhparams.pem" ]]; then
+                log_info "Ensuring SSL options and DH parameters exist..."
+                sudo mkdir -p /etc/letsencrypt
+                if [[ ! -f "/etc/letsencrypt/options-ssl-nginx.conf" ]]; then
+                        sudo tee /etc/letsencrypt/options-ssl-nginx.conf >/dev/null <<EOF
+ssl_session_cache shared:le_nginx_SSL:10m;
+ssl_session_timeout 1440m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";
+EOF
+                fi
+                if [[ ! -f "/etc/letsencrypt/ssl-dhparams.pem" ]]; then
+                        # Generate 2048 bit DH params if not exists
+                        sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
+                fi
         fi
+}
 
-        local admin_email="admin@$primary_domain"
-        local service_name="${custom_name}-${primary_domain}"
+generate_local_ssl() {
+        local domain="$1"
+        local cert_dir="/etc/letsencrypt/live/$domain"
+        
+        log_info "Generating local self-signed SSL for $domain..."
+        sudo mkdir -p "$cert_dir"
+        
+        if [[ ! -f "$cert_dir/fullchain.pem" ]] || [[ -f "$cert_dir/.local_fallback" ]]; then
+                sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                        -keyout "$cert_dir/privkey.pem" \
+                        -out "$cert_dir/fullchain.pem" \
+                        -subj "/C=US/ST=State/L=City/O=Organization/CN=$domain" >/dev/null 2>&1
+                
+                if [[ $? -eq 0 ]]; then
+                        sudo touch "$cert_dir/.local_fallback"
+                        return 0
+                fi
+        fi
+        return 1
+}
 
-        log_info "Setting up SSL for $primary_domain..."
+try_certbot_ssl() {
+        local domain="$1" custom_name="$2"
+        local admin_email="admin@$domain"
+        local service_name="${custom_name:-sgtm}-${domain}"
+        
+        log_info "Attempting Certbot SSL for $domain..."
 
         # Get server IP for DNS verification
         local SERVER_IP
         SERVER_IP=$(get_server_ip)
-        if [[ -z "$SERVER_IP" ]]; then
-                log_warning "Cannot determine server IP, DNS verification skipped"
-        else
-                # Verify DNS before proceeding
-                if ! dns_verify "$primary_domain" "$SERVER_IP"; then
-                        log_warning "DNS verification failed for $primary_domain - SSL may fail"
+        if [[ -n "$SERVER_IP" ]]; then
+                if ! dns_verify "$domain" "$SERVER_IP"; then
+                        log_warning "DNS verification failed for $domain - Certbot might fail"
                 fi
         fi
 
-        # Only request SSL for the primary domain
-        local DOMAINS=("$primary_domain")
-        local FINAL_DOMAINS="$primary_domain"
-
         # Temp Nginx conf for ACME challenge
         local TEMP_CONF="/etc/nginx/sites-available/${service_name}_acme"
-
-        # Create temporary configuration for ACME challenge
         sudo tee "$TEMP_CONF" >/dev/null <<EOL
 server {
     listen 80;
-    server_name $primary_domain;
-
+    server_name $domain;
     location /.well-known/acme-challenge/ {
         root /var/www/html;
-    }
-
-    location / {
-        return 301 https://\$host\$request_uri;
     }
 }
 EOL
 
-        # Enable the temporary config
         sudo ln -sf "$TEMP_CONF" "/etc/nginx/sites-enabled/${service_name}_acme"
-
-        # Test and reload Nginx
-        if ! sudo nginx -t; then
-                log_error "Nginx configuration test failed"
-                sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme"
-                sudo rm -f "$TEMP_CONF"
+        sudo nginx -t && sudo systemctl reload nginx || {
+                sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme" "$TEMP_CONF"
                 return 1
+        }
+
+        local success=false
+        # Strategy 1: Nginx plugin
+        if sudo certbot certonly --nginx --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" 2>/dev/null; then
+                success=true
+        # Strategy 2: Standalone as fallback
+        elif sudo certbot certonly --standalone --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" 2>/dev/null; then
+                success=true
         fi
 
-        if ! sudo systemctl reload nginx; then
-                log_error "Failed to reload Nginx"
-                sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme"
-                sudo rm -f "$TEMP_CONF"
-                return 1
+        sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme" "$TEMP_CONF"
+        sudo systemctl reload nginx
+        
+        if $success; then
+                sudo rm -f "/etc/letsencrypt/live/$domain/.local_fallback"
+                return 0
         fi
+        return 1
+}
 
-        sleep 2
+setup_ssl_certificates() {
+        local domains="$1" custom_name="$2" port="$3"
+        local all_success=true
 
-        # Build certbot command
-        local CERTBOT_CMD=("sudo" "certbot" "certonly" "--nginx" "--non-interactive" "--agree-tos" "--email" "$admin_email" "--no-eff-email")
-        for domain in "${DOMAINS[@]}"; do
-                CERTBOT_CMD+=("-d" "$domain")
+        IFS=' ' read -ra domain_array <<<"$domains"
+        
+        ensure_ssl_options
+
+        for domain in "${domain_array[@]}"; do
+                if check_ssl_enabled "$domain"; then
+                        # If it's a local fallback, we might want to retry it later via cron, 
+                        # but for initial setup, we count it as "already handled" if valid.
+                        if [[ ! -f "/etc/letsencrypt/live/$domain/.local_fallback" ]]; then
+                                log_info "Valid SSL already exists for $domain"
+                                continue
+                        fi
+                fi
+
+                if try_certbot_ssl "$domain" "$custom_name"; then
+                        log_success "✅ SSL certificate obtained for $domain"
+                else
+                        log_warning "⚠️  Certbot failed for $domain - falling back to local SSL"
+                        if generate_local_ssl "$domain"; then
+                                log_success "✅ Local SSL fallback generated for $domain"
+                        else
+                                log_error "❌ Failed to generate local SSL for $domain"
+                                all_success=false
+                        fi
+                fi
         done
 
-        log_info "Running certbot command: ${CERTBOT_CMD[*]}"
-
-        # Try obtaining certificate
-        if "${CERTBOT_CMD[@]}" 2>/dev/null; then
-                log_success "SSL certificate obtained for $FINAL_DOMAINS"
-        else
-                log_warning "Certbot failed for $FINAL_DOMAINS - trying standalone method as fallback..."
-
-                # Fallback to standalone method
-                local STANDALONE_CMD=("sudo" "certbot" "certonly" "--standalone" "--non-interactive" "--agree-tos" "--email" "$admin_email" "--no-eff-email" "-d" "$primary_domain")
-
-                if "${STANDALONE_CMD[@]}" 2>/dev/null; then
-                        log_success "SSL certificate obtained using standalone method for $primary_domain"
-                else
-                        log_error "All SSL certificate issuance methods failed for $primary_domain"
-                        sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme"
-                        sudo rm -f "$TEMP_CONF"
-                        sudo systemctl reload nginx
-                        return 1
-                fi
-        fi
-
-        # Cleanup temporary config
-        sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme"
-        sudo rm -f "$TEMP_CONF"
-
-        if ! sudo systemctl reload nginx; then
-                log_error "Failed to reload Nginx after SSL setup"
-                return 1
-        fi
-
-        # Verify certificate was created
-        if check_ssl_enabled "$primary_domain"; then
-                log_success "✅ SSL setup completed successfully for $primary_domain"
-                return 0
-        else
-                log_error "SSL certificate files not found after setup"
-                return 1
-        fi
+        if $all_success; then return 0; else return 1; fi
 }
 
 check_ssl_enabled() {
@@ -1457,6 +1467,17 @@ add_subdomain() {
         done
 
         local all_domains_str="${unique_domains[*]}"
+        
+        # Extract custom name from full container name for SSL attribution
+        local custom_name_extracted=""
+        if [[ "$container" =~ ^${CONTAINER_NAME_PREFIX}-[^-]+-([^-]+)- ]]; then
+                custom_name_extracted="${BASH_REMATCH[1]}"
+        fi
+
+        log_info "Setting up SSL for newly added domains..."
+        # Note: setup_ssl_certificates will handle local fallback if Certbot fails
+        setup_ssl_certificates "$new_subdomains" "$custom_name_extracted" "$port"
+
         if ! regenerate_nginx_config_for_domains "$all_domains_str" "$port"; then
                 if $use_json; then
                         json_write "$(build_json_object "error" "Failed to create Nginx configuration")"
@@ -1803,6 +1824,95 @@ count_usage() {
 	fi
 }
 
+retry_ssl() {
+        local use_json=false
+        if [[ "$1" == "--json" ]]; then use_json=true; fi
+        
+        [[ $JSON_OUTPUT -eq 0 ]] && log_info "Scanning for local fallback certificates to upgrade..."
+        
+        local found_local=()
+        # Find directories with .local_fallback
+        if [[ -d "/etc/letsencrypt/live" ]]; then
+                for dir in /etc/letsencrypt/live/*/; do
+                        if [[ -f "${dir}.local_fallback" ]]; then
+                                local domain=$(basename "$dir")
+                                found_local+=("$domain")
+                        fi
+                done
+        fi
+
+        if [[ ${#found_local[@]} -eq 0 ]]; then
+                [[ $JSON_OUTPUT -eq 0 ]] && log_info "No local certificates found to upgrade."
+                [[ $use_json == true ]] && json_write "$(build_json_object "status" "success" "message" "No local certificates found")"
+                return 0
+        fi
+
+        local upgraded=()
+        local still_local=()
+
+        for domain in "${found_local[@]}"; do
+                [[ $JSON_OUTPUT -eq 0 ]] && log_info "Retrying Certbot for $domain..."
+                if try_certbot_ssl "$domain"; then
+                        [[ $JSON_OUTPUT -eq 0 ]] && log_success "Successfully upgraded $domain to Certbot SSL"
+                        upgraded+=("$domain")
+                else
+                        [[ $JSON_OUTPUT -eq 0 ]] && log_warning "Still failing for $domain"
+                        still_local+=("$domain")
+                fi
+        done
+
+        # If any upgraded, regenerate Nginx configs for containers using these domains
+        if [[ ${#upgraded[@]} -gt 0 ]]; then
+                [[ $JSON_OUTPUT -eq 0 ]] && log_info "Regenerating Nginx configs for upgraded domains..."
+                for config in /etc/nginx/sites-available/*; do
+                        if [[ -f "$config" ]]; then
+                                for domain in "${upgraded[@]}"; do
+                                        if grep -q "server_name $domain" "$config"; then
+                                                # Extract port and full domain list from config comments
+                                                local port_line=$(grep "port " "$config" | head -n1)
+                                                local domains_line=$(grep "# Domains: " "$config" | head -n1)
+                                                if [[ "$port_line" =~ port\ ([0-9]+) ]] && [[ "$domains_line" =~ Domains:\ (.*) ]]; then
+                                                        local extracted_port="${BASH_REMATCH[1]}"
+                                                        local extracted_domains="${BASH_REMATCH[1]}"
+                                                        # Wait, BASH_REMATCH[1] is port, BASH_REMATCH[2] should be domains if I used (.*) after Domains:
+                                                fi
+                                                # Safer extraction
+                                                local ext_port=$(grep "port " "$config" | head -n1 | grep -oE '[0-9]+')
+                                                local ext_domains=$(grep "# Domains: " "$config" | head -n1 | sed 's/# Domains: //')
+                                                
+                                                if [[ -n "$ext_port" && -n "$ext_domains" ]]; then
+                                                        regenerate_nginx_config_for_domains "$ext_domains" "$ext_port"
+                                                fi
+                                                break # Move to next config file
+                                        fi
+                                done
+                        fi
+                done
+        fi
+
+        if [[ $use_json == true ]]; then
+                json_write "$(build_json_object \
+                        "status" "success" \
+                        "upgraded_count" "${#upgraded[@]}" \
+                        "upgraded_domains" "${upgraded[*]}" \
+                        "still_local_count" "${#still_local[@]}" \
+                        "still_local_domains" "${still_local[*]}")"
+        fi
+}
+
+cron_setup() {
+        local script_path=$(realpath "$0" 2>/dev/null || echo "$0")
+        local cron_job="0 */3 * * * $script_path retry-ssl --json > /var/log/docker-tagserver-retry.log 2>&1"
+        
+        # Check if already exists
+        if crontab -l 2>/dev/null | grep -q "retry-ssl"; then
+                log_info "Retry cronjob already exists."
+        else
+                (crontab -l 2>/dev/null; echo "$cron_job") | crontab -
+                log_success "✅ Cronjob added: 3-hour retry for SSL certificates"
+        fi
+}
+
 # =============================================================================
 # HELP FUNCTION
 # =============================================================================
@@ -1822,6 +1932,8 @@ show_docker_tagserver_help() {
     echo "  add-custom-domain  Add custom domains to existing container"
     echo "  remove-custom-domain Remove custom domains from existing container"
     echo "  count-usage        Count HTTP requests for container"
+    echo "  retry-ssl          Retry Let's Encrypt for local fallback certs"
+    echo "  cron-setup         Setup 3-hour cronjob for SSL retry"
     echo "  help               Show this help"
     echo
     echo -e "${YELLOW}Common Options:${NC}"
@@ -1869,6 +1981,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         add-custom-domain) add_subdomain "$@" ;;
         remove-custom-domain) remove_custom_domain "$@" ;;
         count-usage) count_usage "$@" ;;
+        retry-ssl) retry_ssl "$@" ;;
+        cron-setup) cron_setup "$@" ;;
         help | -h | --help) show_docker_tagserver_help ;;
 	*)
 		log_error "Unknown command: $CMD"
