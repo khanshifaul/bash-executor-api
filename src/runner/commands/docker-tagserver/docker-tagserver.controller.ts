@@ -17,6 +17,7 @@ import { CommandResponseDto } from '../../dto/command-response.dto';
 import { DockerTagserverCommandHandler } from './docker-tagserver.handler';
 import {
   DockerTagserverAddCustomDomainDto,
+  DockerTagserverRemoveCustomDomainDto,
   DockerTagserverContainerControlDto,
   DockerTagserverCountLogsDto,
   DockerTagserverCreateDto,
@@ -193,6 +194,21 @@ export class DockerTagserverController {
   })
   async addCustomDomain(@Body() dto: DockerTagserverAddCustomDomainDto): Promise<CommandResponseDto> {
     return this.handler.handleAddCustomDomain(dto);
+  }
+
+  @Post('remove-custom-domain')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Remove custom domains from a container',
+    description: 'Remove existing custom domains from a container',
+  })
+  @ApiBody({ type: DockerTagserverRemoveCustomDomainDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Custom domains removed successfully',
+  })
+  async removeCustomDomain(@Body() dto: DockerTagserverRemoveCustomDomainDto): Promise<CommandResponseDto> {
+    return this.handler.handleRemoveCustomDomain(dto);
   }
 
   @Post('verify-dns-tasks')

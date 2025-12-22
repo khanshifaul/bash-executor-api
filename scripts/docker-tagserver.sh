@@ -44,7 +44,7 @@ log_info() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${BLUE}[INFO]${NC} $1" >&2; }
 log_success() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${GREEN}[SUCCESS]${NC} $1" >&2; }
 log_warning() { [[ $JSON_OUTPUT -eq 0 ]] && echo -e "${YELLOW}[WARNING]${NC} $1" >&2; }
 log_error() {
-	echo -e "${RED}[ERROR]${NC} $1" >&2
+	[[ $JSON_OUTPUT -eq 0 ]] && echo -e "${RED}[ERROR]${NC} $1" >&2
 	if [[ $JSON_OUTPUT -eq 1 ]]; then
 		if [[ -z "$JSON_ERRORS" ]]; then
 			JSON_ERRORS="$1"
@@ -275,23 +275,26 @@ server {
 }
 EOL
 
+        local cb_output="/dev/null"
+        [[ $JSON_OUTPUT -eq 0 ]] && cb_output="/dev/stderr"
+
         sudo ln -sf "$TEMP_CONF" "/etc/nginx/sites-enabled/${service_name}_acme"
-        sudo nginx -t && sudo systemctl reload nginx || {
+        sudo nginx -t >$cb_output 2>&1 && sudo systemctl reload nginx >$cb_output 2>&1 || {
                 sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme" "$TEMP_CONF"
                 return 1
         }
 
         local success=false
         # Strategy 1: Nginx plugin
-        if sudo certbot certonly --nginx --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" 2>/dev/null; then
+        if sudo certbot certonly --nginx --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" >$cb_output 2>&1; then
                 success=true
         # Strategy 2: Standalone as fallback
-        elif sudo certbot certonly --standalone --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" 2>/dev/null; then
+        elif sudo certbot certonly --standalone --non-interactive --agree-tos --email "$admin_email" --no-eff-email -d "$domain" >$cb_output 2>&1; then
                 success=true
         fi
 
         sudo rm -f "/etc/nginx/sites-enabled/${service_name}_acme" "$TEMP_CONF"
-        sudo systemctl reload nginx
+        sudo systemctl reload nginx >$cb_output 2>&1
         
         if $success; then
                 sudo rm -f "/etc/letsencrypt/live/$domain/.local_fallback"
@@ -303,6 +306,7 @@ EOL
 setup_ssl_certificates() {
         local domains="$1" custom_name="$2" port="$3"
         local all_success=true
+        SSL_RESULTS=""
 
         IFS=' ' read -ra domain_array <<<"$domains"
         
@@ -320,12 +324,15 @@ setup_ssl_certificates() {
 
                 if try_certbot_ssl "$domain" "$custom_name"; then
                         log_success "✅ SSL certificate obtained for $domain"
+                        SSL_RESULTS="${SSL_RESULTS} ${domain}:SUCCESS"
                 else
                         log_warning "⚠️  Certbot failed for $domain - falling back to local SSL"
                         if generate_local_ssl "$domain"; then
                                 log_success "✅ Local SSL fallback generated for $domain"
+                                SSL_RESULTS="${SSL_RESULTS} ${domain}:LOCAL_FALLBACK"
                         else
                                 log_error "❌ Failed to generate local SSL for $domain"
+                                SSL_RESULTS="${SSL_RESULTS} ${domain}:FAILED"
                                 all_success=false
                         fi
                 fi
@@ -622,19 +629,25 @@ regenerate_nginx_config_for_domains() {
         local available="/etc/nginx/sites-available/$primary_domain"
         local enabled="/etc/nginx/sites-enabled/$primary_domain"
 
-        # Backup existing config
-        local backup=""
-        if [[ -f "$available" ]]; then
-                backup="$available.$(date +%Y%m%d_%H%M%S).bak"
-                mv "$available" "$backup" || {
-                        log_error "Failed to backup config"
-                        return 1
-                }
+        # Find if there's an existing config for this port under a different name
+        local existing_config=""
+        for config_file in /etc/nginx/sites-available/*; do
+                if [[ -f "$config_file" && "$config_file" != "$available" ]] && grep -q "port $port" "$config_file" 2>/dev/null; then
+                        existing_config="$config_file"
+                        break
+                fi
+        done
+
+        # If a config exists with a different name, remove it to avoid conflicts
+        if [[ -n "$existing_config" ]]; then
+                local old_name=$(basename "$existing_config")
+                log_info "Removing old Nginx config file: $old_name (switched to $primary_domain)"
+                sudo rm -f "$existing_config" "/etc/nginx/sites-enabled/$old_name"
         fi
 
         # Generate new config
         log_info "Generating nginx config for domains: $domains on port $port"
-        cat >"$available" <<EOF
+        sudo tee "$available" >/dev/null <<EOF
 # Auto-generated Nginx config for GTM container on port $port
 # Managed by docker-tagserver.sh
 # Domains: $domains
@@ -643,27 +656,17 @@ EOF
         # Generate server blocks for each domain
         for domain in "${domain_array[@]}"; do
                 local ssl_enabled=$(check_ssl_enabled "$domain" && echo true || echo false)
-                generate_nginx_server_block "$domain" "$port" "$ssl_enabled"
-        done >>"$available"
+                generate_nginx_server_block "$domain" "$port" "$ssl_enabled" | sudo tee -a "$available" >/dev/null
+        done
 
         # Enable site and reload
-        ln -sf "$available" "$enabled"
+        sudo ln -sf "$available" "$enabled"
 
         if reload_nginx; then
                 log_success "✅ Updated Nginx config for domains: $domains"
                 return 0
         else
-                log_error "❌ Nginx reload failed – reverting config changes"
-                # Revert changes if nginx test fails
-                if [[ -n "$backup" && -f "$backup" ]]; then
-                        mv "$backup" "$available"
-                        ln -sf "$available" "$enabled"
-                        reload_nginx
-                        log_info "✅ Reverted to previous Nginx config"
-                else
-                        rm -f "$available" "$enabled"
-                        log_warning "⚠️  Removed invalid config (no backup available)"
-                fi
+                log_error "❌ Nginx reload failed"
                 return 1
         fi
 }
@@ -847,6 +850,7 @@ run_docker_tagserver() {
         else
                 log_warning "⚠️  SSL setup failed - will serve over HTTP only"
         fi
+        local ssl_status_report=$(echo "$SSL_RESULTS" | xargs)
 
         # Regenerate Nginx config with proper SSL settings
         log_info "Updating Nginx configuration with SSL settings..."
@@ -870,7 +874,8 @@ run_docker_tagserver() {
                                 "image" "${container_details["image"]}" \
                                 "domain" "${container_details["domain"]}" \
                                 "user_id" "${container_details["user_id"]}" \
-                                "ssl_enabled" "$ssl_success")"
+                                "ssl_enabled" "$ssl_success" \
+                                "ssl_status" "$ssl_status_report")"
                 else
                         [[ $JSON_OUTPUT -eq 0 ]] && echo
                         log_success "✅ Container started successfully: $container_name"
@@ -1477,6 +1482,7 @@ add_subdomain() {
         log_info "Setting up SSL for newly added domains..."
         # Note: setup_ssl_certificates will handle local fallback if Certbot fails
         setup_ssl_certificates "$new_subdomains" "$custom_name_extracted" "$port"
+        local ssl_status_report=$(echo "$SSL_RESULTS" | xargs)
 
         if ! regenerate_nginx_config_for_domains "$all_domains_str" "$port"; then
                 if $use_json; then
@@ -1494,7 +1500,8 @@ add_subdomain() {
                         "container" "$container" \
                         "action" "subdomains_added" \
                         "new_domains" "$new_subdomains" \
-                        "all_domains" "$all_domains_str")"
+                        "all_domains" "$all_domains_str" \
+                        "ssl_status" "$ssl_status_report")"
         else
                 log_success "✅ Added subdomains to container: $container"
                 log_info "All domains now configured: $all_domains_str"

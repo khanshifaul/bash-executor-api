@@ -217,6 +217,51 @@ export class DockerTagserverAddCustomDomainDto {
 }
 
 /**
+ * Docker Tagserver Remove Custom Domain DTO
+ */
+export class DockerTagserverRemoveCustomDomainDto {
+  @ApiProperty({
+    type: String,
+    example: 'container-id-123',
+  })
+  @IsString()
+  @IsOptional()
+  containerId?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'my-tagserver',
+  })
+  @IsString()
+  @IsOptional()
+  containerName?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'user123',
+  })
+  @IsString()
+  @IsOptional()
+  user?: string;
+
+  @ApiProperty({
+    type: [String],
+    example: ['example.com', 'www.example.com'],
+  })
+  @IsString({ each: true })
+  @IsArray()
+  domains: string[];
+
+  @ApiProperty({
+    type: Boolean,
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  json?: boolean = true;
+}
+
+/**
  * Docker Tagserver Count Logs Command DTO
  */
 export class DockerTagserverCountLogsDto {

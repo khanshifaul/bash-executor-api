@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import { CommandResponseDto } from '../../dto/command-response.dto';
 import {
   DockerTagserverAddCustomDomainDto,
+  DockerTagserverRemoveCustomDomainDto,
   DockerTagserverContainerControlDto,
   DockerTagserverCountLogsDto,
   DockerTagserverCreateDto,
@@ -121,6 +122,18 @@ export class DockerTagserverCommandHandler {
    */
   async handleAddCustomDomain(dto: DockerTagserverAddCustomDomainDto): Promise<CommandResponseDto> {
     const cmd = ['/root/scripts/docker-tagserver.sh', 'add-custom-domain', '--json'];
+    if (dto.containerId) cmd.push('-i', dto.containerId);
+    if (dto.containerName) cmd.push('-n', dto.containerName);
+    if (dto.user) cmd.push('-u', dto.user);
+    cmd.push('-s', dto.domains.join(','));
+    return this.executeCommand(cmd, true);
+  }
+
+  /**
+   * Remove custom domains from a container
+   */
+  async handleRemoveCustomDomain(dto: DockerTagserverRemoveCustomDomainDto): Promise<CommandResponseDto> {
+    const cmd = ['/root/scripts/docker-tagserver.sh', 'remove-custom-domain', '--json'];
     if (dto.containerId) cmd.push('-i', dto.containerId);
     if (dto.containerName) cmd.push('-n', dto.containerName);
     if (dto.user) cmd.push('-u', dto.user);
