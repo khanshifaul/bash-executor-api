@@ -22,8 +22,7 @@ export class ApiKeyService {
         userId,
         permissions: dto.permissions || [],
         scopes: dto.scopes || [],
-        usageLimit: dto.usageLimit ?? null,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+
       },
     });
 
@@ -84,8 +83,7 @@ export class ApiKeyService {
         description: dto.description || null,
         permissions: dto.permissions,
         scopes: dto.scopes,
-        usageLimit: dto.usageLimit ?? null,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+
         isActive: dto.isActive ?? undefined,
       },
     });

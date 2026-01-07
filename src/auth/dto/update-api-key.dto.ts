@@ -51,10 +51,7 @@ export class UpdateApiKeyDto {
   @IsNumber({}, { message: 'Must be a number' })
   usageLimit?: number;
 
-  @ApiPropertyOptional({ description: 'New expiration date (ISO 8601)', example: '2025-12-31T23:59:59Z' })
-  @IsOptional()
-  @IsDateString()
-  expiresAt?: string;
+
 
   @ApiPropertyOptional({ description: 'Activate/deactivate the key' })
   @IsOptional()
